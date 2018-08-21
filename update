@@ -1,0 +1,28 @@
+#/!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+aptitude update
+aptitude upgrade -y
+
+npm install -g cncjs@latest --unsafe-perm
+
+su pi
+   cd git
+   cd grid-apps
+   git fetch --all
+   git checkout -f origin/master
+   npm install
+   cd ..
+
+   cd jscut/
+   git checkout -f origin/gh-pages
+   cd ..
+exit
+
+cp -r /home/pi/git/jscut /var/www/html/
+chown root:root -R /var/www/html/jscut
+
+echo DONE...

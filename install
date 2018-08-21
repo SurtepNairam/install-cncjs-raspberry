@@ -1,0 +1,77 @@
+#/!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+aptitude update
+aptitude upgrade -y
+
+#install nodejs
+  curl -sL https://deb.nodesource.com/setup_8.x | bash -
+  apt-get install -y nodejs
+
+#install cncjs
+  npm install -g cncjs@latest --unsafe-perm
+
+# Install PM2
+   npm install -g pm2
+   env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi
+   su pi
+      pm2 start $(which cncjs) -- --port 8000 -m /tinyweb:/home/pi/tinyweb
+      pm2 save
+      pm2 list
+   exit
+
+#install kiri-moto
+  su pi
+     mkdir /home/pi/git
+     cd /home/pi/git
+     git clone https://github.com/GridSpace/grid-apps.git
+     cd grid-apps
+
+     npm install
+     pm2 start -n "moto"  js/web-server.js nolocal
+     pm2 save
+  exit
+
+
+#install jscut
+  su pi
+     git clone https://github.com/tbfleming/jscut.git     
+  exit
+
+
+#install web server
+  apt install -y apache2
+
+  echo '<VirtualHost *:80>
+	ServerAdmin webmaster@localhost
+	DocumentRoot /var/www/html
+    <Directory />
+        Options FollowSymLinks Indexes
+        AllowOverride None
+    </Directory>
+	ErrorLog ${APACHE_LOG_DIR}/error.log
+	CustomLog ${APACHE_LOG_DIR}/access.log combined
+    </VirtualHost>' > /etc/apache2/sites-enabled/000-default.conf
+
+   service apache2 restart
+
+
+   echo '
+      <html lang="en">
+      <head></head>
+      <body>
+      <a href="#"  
+         <a href="#"  onclick="window.open(`//${window.location.hostname}:8000`)">CNCJS</a></br>
+         <a href="#"  onclick="window.open(`//${window.location.hostname}:8080/kiri`)">Kiri-moto</a></br>
+         <a href="#"  onclick="window.open(`//${window.location.hostname}:8080/meta`)">Meta-moto</a></br>
+         <a href="#"  onclick="window.open(`//${window.location.hostname}/jscut/jscut.html`)">jscut</a></br>
+      </body>
+      </html>' > /var/www/html/index.html
+
+   #Repare jscut
+   cp -r /home/pi/git/jscut /var/www/html/
+   chown root:root -R /var/www/html/jscut
+
